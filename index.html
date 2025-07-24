@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Quiz</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter for a clean look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles to enhance the look and feel */
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation; /* Improves touch responsiveness */
+        }
+        /* Custom transition for smooth visual feedback */
+        .btn {
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        /* Styles for correct and incorrect answer feedback */
+        .correct {
+            background-color: #22c55e !important; /* Tailwind green-500 */
+            color: white !important;
+            border-color: #16a34a !important; /* Tailwind green-600 */
+        }
+        .incorrect {
+            background-color: #ef4444 !important; /* Tailwind red-500 */
+            color: white !important;
+            border-color: #dc2626 !important; /* Tailwind red-600 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main Quiz Container -->
+    <div id="quiz-container" class="bg-white dark:bg-gray-800 w-full max-w-2xl mx-auto p-6 sm:p-8 rounded-2xl shadow-lg">
+        <h1 class="text-2xl sm:text-3xl font-bold text-center text-blue-600 dark:text-blue-400 mb-6">Tech & Science Quiz</h1>
+        
+        <!-- Question Display Area -->
+        <div id="question-area">
+            <h2 id="question-text" class="text-xl sm:text-2xl font-semibold mb-6 min-h-[80px]">Question text goes here...</h2>
+            <div id="answer-buttons" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Answer buttons will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Controls and Feedback Area -->
+        <div class="mt-8 flex items-center justify-between">
+            <div id="feedback" class="text-lg font-medium"></div>
+            <button id="next-btn" class="btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow hidden">Next</button>
+        </div>
+    </div>
+
+    <!-- Score/Results Container (Initially Hidden) -->
+    <div id="score-container" class="bg-white dark:bg-gray-800 w-full max-w-2xl mx-auto p-8 rounded-2xl shadow-lg text-center hidden">
+        <h2 class="text-3xl font-bold mb-4">Quiz Complete!</h2>
+        <p id="score-text" class="text-xl mb-6">You scored 0 out of 0.</p>
+        <button id="restart-btn" class="btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow">Restart Quiz</button>
+    </div>
+
+    <script>
+        // --- Quiz Data ---
+        const quizQuestions = [
+            {
+                question: "What does HTML stand for?",
+                answers: [
+                    { text: "HyperText Markup Language", correct: true },
+                    { text: "Hyperlinks and Text Markup Language", correct: false },
+                    { text: "Home Tool Markup Language", correct: false },
+                    { text: "Hyper-linking Textual Machine Language", correct: false }
+                ]
+            },
+            {
+                question: "Which planet is known as the Red Planet?",
+                answers: [
+                    { text: "Earth", correct: false },
+                    { text: "Mars", correct: true },
+                    { text: "Jupiter", correct: false },
+                    { text: "Venus", correct: false }
+                ]
+            },
+            {
+                question: "What is the chemical symbol for water?",
+                answers: [
+                    { text: "O2", correct: false },
+                    { text: "CO2", correct: false },
+                    { text: "H2O", correct: true },
+                    { text: "NaCl", correct: false }
+                ]
+            },
+            {
+                question: "What is the powerhouse of the cell?",
+                answers: [
+                    { text: "Nucleus", correct: false },
+                    { text: "Ribosome", correct: false },
+                    { text: "Mitochondrion", correct: true },
+                    { text: "Cell Wall", correct: false }
+                ]
+            },
+            {
+                question: "Which company developed the JavaScript language?",
+                answers: [
+                    { text: "Microsoft", correct: false },
+                    { text: "Apple", correct: false },
+                    { text: "Sun Microsystems", correct: false },
+                    { text: "Netscape", correct: true }
+                ]
+            }
+        ];
+
+        // --- DOM Element References ---
+        const quizContainer = document.getElementById('quiz-container');
+        const questionTextElement = document.getElementById('question-text');
+        const answerButtonsElement = document.getElementById('answer-buttons');
+        const nextButton = document.getElementById('next-btn');
+        const feedbackElement = document.getElementById('feedback');
+        const scoreContainer = document.getElementById('score-container');
+        const scoreTextElement = document.getElementById('score-text');
+        const restartButton = document.getElementById('restart-btn');
+
+        // --- State Variables ---
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        // --- Functions ---
+
+        /**
+         * Starts the quiz by resetting state and showing the first question.
+         */
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            scoreContainer.classList.add('hidden');
+            quizContainer.classList.remove('hidden');
+            nextButton.classList.add('hidden');
+            nextButton.textContent = 'Next';
+            showQuestion();
+        }
+
+        /**
+         * Displays the current question and its answer options.
+         */
+        function showQuestion() {
+            resetState();
+            const currentQuestion = quizQuestions[currentQuestionIndex];
+            questionTextElement.textContent = currentQuestion.question;
+
+            currentQuestion.answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.textContent = answer.text;
+                button.classList.add('btn', 'w-full', 'p-4', 'border-2', 'border-gray-300', 'dark:border-gray-600', 'rounded-lg', 'text-left', 'hover:bg-gray-200', 'dark:hover:bg-gray-700', 'focus:outline-none', 'focus:ring-2', 'focus:ring-blue-500');
+                if (answer.correct) {
+                    button.dataset.correct = answer.correct;
+                }
+                button.addEventListener('click', selectAnswer);
+                answerButtonsElement.appendChild(button);
+            });
+        }
+
+        /**
+         * Resets the UI for the next question (clears buttons, feedback).
+         */
+        function resetState() {
+            nextButton.classList.add('hidden');
+            feedbackElement.textContent = '';
+            while (answerButtonsElement.firstChild) {
+                answerButtonsElement.removeChild(answerButtonsElement.firstChild);
+            }
+        }
+
+        /**
+         * Handles the user's answer selection, provides feedback, and updates the score.
+         * @param {Event} e - The click event from the answer button.
+         */
+        function selectAnswer(e) {
+            const selectedButton = e.target;
+            const isCorrect = selectedButton.dataset.correct === 'true';
+            
+            // Provide feedback and update score
+            if (isCorrect) {
+                score++;
+                selectedButton.classList.add('correct');
+                feedbackElement.textContent = 'Correct!';
+                feedbackElement.classList.add('text-green-500');
+                feedbackElement.classList.remove('text-red-500');
+            } else {
+                selectedButton.classList.add('incorrect');
+                feedbackElement.textContent = 'Wrong!';
+                feedbackElement.classList.add('text-red-500');
+                feedbackElement.classList.remove('text-green-500');
+            }
+
+            // Highlight the correct answer and disable all buttons
+            Array.from(answerButtonsElement.children).forEach(button => {
+                if (button.dataset.correct === 'true') {
+                    button.classList.add('correct');
+                }
+                button.disabled = true;
+            });
+
+            // Show the next button
+            if (quizQuestions.length > currentQuestionIndex + 1) {
+                nextButton.classList.remove('hidden');
+            } else {
+                nextButton.textContent = 'Show Score';
+                nextButton.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Displays the final score to the user.
+         */
+        function showScore() {
+            quizContainer.classList.add('hidden');
+            scoreContainer.classList.remove('hidden');
+            scoreTextElement.textContent = `You scored ${score} out of ${quizQuestions.length}.`;
+        }
+
+        /**
+         * Handles the click of the "Next" or "Show Score" button.
+         */
+        function handleNextButton() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizQuestions.length) {
+                showQuestion();
+            } else {
+                showScore();
+            }
+        }
+
+        // --- Event Listeners ---
+        nextButton.addEventListener('click', handleNextButton);
+        restartButton.addEventListener('click', startQuiz);
+
+        // --- Initial Call ---
+        // Start the quiz when the script loads
+        startQuiz();
+    </script>
+
+</body>
+</html>
